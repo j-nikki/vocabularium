@@ -40,4 +40,5 @@ if _args.command:
             from vocabularium.insert import insert
             insert(con.cursor(), _args)
         elif _args.command == 'serve':
-            pass
+            from vocabularium.serve import serve
+            serve(con, _args)
