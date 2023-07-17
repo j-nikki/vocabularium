@@ -1,23 +1,14 @@
+'''Database population logic for vocabularium.'''
+
 import json
-from operator import itemgetter
-import os
-from pathlib import Path
 import sqlite3
-from argparse import ArgumentParser
 import sys
+from argparse import Namespace
+from operator import itemgetter
 from typing import Any, Callable
 
 import pkg_resources
 
-_cachedir = os.getenv('XDG_DATA_HOME', os.path.expanduser('~/.local/share')) + '/vocabularium'
-if not os.path.isdir(_cachedir):
-    os.makedirs(_cachedir, exist_ok=True)
-
-_ap = ArgumentParser('vocabularium', description='A program serving an HTTP API for a vocabulary database.', epilog='The database is stored in a SQLite file. The default location is "$XDG_DATA_HOME/vocabularium/en.db". The database is created if it does not exist.')
-_ap.add_argument('--database', '-db', type=Path, default=f'{_cachedir}/en.db')
-_ap.add_argument('--verbose', '-v', action='store_true', help='Print verbose output.')
-_ap.add_argument('input', nargs='?', type=Path, default=sys.stdin, help='A per-line listing of individual JSON objects, each representing a word. If not specified, read from stdin.')
-args = _ap.parse_args()
 
 def _insert(tbl: str, *cols: str, nuniq: int | None = None):
     stmt = f'insert or ignore into {tbl} ({",".join(cols)}) values ({",".join("?"*len(cols))});'
@@ -52,7 +43,8 @@ def _insert_word(cur: sqlite3.Cursor, data: Any):
             for word in set(map(itemgetter('word'), sense.get(nym, []))):
                 cur.execute(f'insert or ignore into sense_{nym.rstrip("s")} values (?,?);', (sid, word))
 
-def _main():
+def insert(args: Namespace):
+    '''Insert words into the database.'''
     with sqlite3.connect(str(args.database)) as con:
         cur = con.cursor()
         with open(pkg_resources.resource_filename('vocabularium.res', 'schema.sql'), encoding='U8') as f:
@@ -62,6 +54,3 @@ def _main():
             if args.verbose:
                 sys.stderr.write(f'\r{i+1:,} {x["word"][-20:]:20}')
             _insert_word(cur, x)
-
-if __name__ == '__main__':
-    _main()
