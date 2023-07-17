@@ -43,14 +43,9 @@ def _insert_word(cur: sqlite3.Cursor, data: Any):
             for word in set(map(itemgetter('word'), sense.get(nym, []))):
                 cur.execute(f'insert or ignore into sense_{nym.rstrip("s")} values (?,?);', (sid, word))
 
-def insert(args: Namespace):
-    '''Insert words into the database.'''
-    with sqlite3.connect(str(args.database)) as con:
-        cur = con.cursor()
-        with open(pkg_resources.resource_filename('vocabularium.res', 'schema.sql'), encoding='U8') as f:
-            schema = f.read()
-        cur.executescript(schema)
-        for i, x in enumerate(map(json.loads, args.input)):
-            if args.verbose:
-                sys.stderr.write(f'\r{i+1:,} {x["word"][-20:]:20}')
-            _insert_word(cur, x)
+def insert(cur: sqlite3.Cursor, args: Namespace):
+    '''Inserts words into the database.'''
+    for i, x in enumerate(map(json.loads, args.input)):
+        if args.verbose:
+            sys.stderr.write(f'\r{i+1:,} {x["word"][-20:]:20}')
+        _insert_word(cur, x)
